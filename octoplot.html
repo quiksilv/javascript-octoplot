@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Octoplot</title>
+<style>
+#thecanvas
+{
+	border: 1px solid black;
+	
+	/* to prevent selection of text on doubleclick */
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+#debug_output
+{
+	border: 1px solid black;
+}
+</style>
+<script>
+var plotcanvas;
+var ctx;
+
+var points = new Array();
+
+var snap_threshold = 20;
+var snap_point;
+var snap_grid = new Array();
+
+var tool_active = false;
+
+function cPoint(_x,_y)
+{
+	this.x = _x;
+	this.y = _y;
+}
+
+function init_objects()
+{
+	plotcanvas = document.getElementById("thecanvas");
+	plotcanvas.addEventListener("click", handle_click, false);
+	plotcanvas.addEventListener("mousemove", handle_move, false);
+	plotcanvas.addEventListener("dblclick", handle_dblclick, false);
+	
+	
+	ctx = plotcanvas.getContext("2d");
+	
+	define_snap_grid();
+	//alert("initialised!");
+}
+
+function define_snap_grid()
+{
+	// vertical gridpoints
+	for(var i=0; i*snap_threshold < ctx.canvas.width; i++)
+	{
+		snap_grid.push(new cPoint(i*snap_threshold,0));
+		snap_grid.push(new cPoint(i*snap_threshold,ctx.canvas.height));
+	}
+	// horizontal gridpoints
+	for(var i=0; i*snap_threshold < ctx.canvas.height; i++)
+	{
+		snap_grid.push(new cPoint(0, i*snap_threshold));
+		snap_grid.push(new cPoint(ctx.canvas.width, i*snap_threshold));
+	}
+}
+
+function handle_move(event)
+{
+	if (tool_active)
+	{
+		var _movepoint = new cPoint(event.x - this.offsetLeft, event.y - this.offsetTop);
+		snap_point = new cPoint(snap_threshold*Math.round(_movepoint.x/snap_threshold),snap_threshold*Math.round(_movepoint.y/snap_threshold));
+		
+		debug(snap_point.x, snap_point.y);
+		
+		update_canvas();
+	}
+}
+
+function handle_click(event)
+{	
+	if (!tool_active)
+	{
+		// clear all existing points to start a new line.
+		while (points.length>0)
+		{
+			points.pop();
+		}
+		
+		// add new point
+		var _movepoint = new cPoint(event.x - this.offsetLeft, event.y - this.offsetTop);
+		snap_point = new cPoint(snap_threshold*Math.round(_movepoint.x/snap_threshold),snap_threshold*Math.round(_movepoint.y/snap_threshold));
+	}
+	points.push(snap_point);
+	tool_active = true;
+	
+	update_canvas();
+}
+
+function handle_dblclick(event)
+{
+	points.push(snap_point);
+	tool_active = false;
+	
+	update_canvas();
+}
+
+function update_canvas()
+{
+	ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+	
+	// draw snap grid
+	ctx.lineWidth="1";
+	ctx.strokeStyle="gray";
+	ctx.beginPath();
+	for (var i=0; i<snap_grid.length; i=i+2)
+	{
+		ctx.moveTo(snap_grid[i].x, snap_grid[i].y);
+		ctx.lineTo(snap_grid[i+1].x, snap_grid[i+1].y);
+	}
+	ctx.stroke();
+
+	// draw lines
+	ctx.lineWidth="3";
+	ctx.strokeStyle="green";
+	if (points.length > 0)
+	{
+		ctx.beginPath();
+		ctx.moveTo(points[0].x,points[0].y);
+		for (var i=1; i<points.length; i++)
+		{
+			ctx.lineTo(points[i].x,points[i].y);
+		}
+		ctx.lineTo(snap_point.x, snap_point.y);
+		ctx.stroke();
+	}
+}
+
+function debug(a,b)
+{
+	var debugdiv = document.getElementById("debug_output");
+	debugdiv.innerHTML = a+","+b;
+}
+
+</script>
+</head>
+
+<body onload="init_objects();">
+canvas below<br>
+<canvas id="thecanvas" width="700" height="500">
+</canvas>
+<br>
+canvas above<br><br>
+debug:
+<div id="debug_output">no output
+</div>
+</body>
+
+</html>
